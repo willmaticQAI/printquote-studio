@@ -10,7 +10,10 @@ import { InfoTip } from "@/components/ui/InfoTip";
 import { Input } from "@/components/ui/Input";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Select } from "@/components/ui/Select";
-import { buildDefaultQuoteInput, calculateQuoteBreakdown } from "@/lib/quote-calculations";
+import {
+  buildDefaultQuoteInput,
+  calculateQuoteBreakdown,
+} from "@/lib/quote-calculations";
 import type {
   FilamentRecord,
   PrintRecord,
@@ -21,23 +24,56 @@ import type {
   SettingsRecord,
 } from "@/lib/types";
 
+type EditableRecord = {
+  kind: "quote" | "print";
+  id: string;
+  label: string;
+  form: QuoteInput;
+};
+
 type CalculatorWorkspaceProps = {
   filaments: FilamentRecord[];
   settings: SettingsRecord;
+  initialRecord?: EditableRecord | null;
+};
+
+const emptyBreakdown: QuoteBreakdown = {
+  materialCost: 0,
+  wasteCost: 0,
+  machineCost: 0,
+  electricityCost: 0,
+  laborCost: 0,
+  subtotal: 0,
+  bulkDiscount: 0,
+  suggestedPrice: 0,
+  finalTotal: 0,
+  profitAmount: 0,
+  marginPercent: 0,
 };
 
 export function CalculatorWorkspace({
   filaments,
   settings,
+  initialRecord = null,
 }: CalculatorWorkspaceProps) {
   const [form, setForm] = useState<QuoteInput>(
-    buildDefaultQuoteInput(settings, filaments[0]?.id ?? "")
+    initialRecord?.form ?? buildDefaultQuoteInput(settings, filaments[0]?.id ?? "")
   );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [calculatedBreakdown, setCalculatedBreakdown] = useState<QuoteBreakdown | null>(
-    null
+    initialRecord ? null : null
   );
+  const [editingRecord, setEditingRecord] = useState<EditableRecord | null>(
+    initialRecord
+  );
+
+  useEffect(() => {
+    setEditingRecord(initialRecord);
+    setForm(initialRecord?.form ?? buildDefaultQuoteInput(settings, filaments[0]?.id ?? ""));
+    setCalculatedBreakdown(null);
+    setMessage("");
+  }, [filaments, initialRecord, settings]);
 
   const selectedFilament = useMemo(
     () => filaments.find((filament) => filament.id === form.filamentId) ?? filaments[0],
@@ -45,28 +81,20 @@ export function CalculatorWorkspace({
   );
 
   const breakdown = useMemo(() => {
-    if (!selectedFilament) {
-      return {
-        materialCost: 0,
-        wasteCost: 0,
-        machineCost: 0,
-        electricityCost: 0,
-        laborCost: 0,
-        subtotal: 0,
-        bulkDiscount: 0,
-        suggestedPrice: 0,
-        finalTotal: 0,
-        profitAmount: 0,
-        marginPercent: 0,
-      };
-    }
-
+    if (!selectedFilament) return emptyBreakdown;
     return calculateQuoteBreakdown(form, selectedFilament, settings);
   }, [form, selectedFilament, settings]);
 
   useEffect(() => {
     setCalculatedBreakdown(null);
   }, [form]);
+
+  function resetForm() {
+    setForm(buildDefaultQuoteInput(settings, filaments[0]?.id ?? ""));
+    setEditingRecord(null);
+    setCalculatedBreakdown(null);
+    setMessage("");
+  }
 
   function calculateSummary() {
     if (!selectedFilament) {
@@ -87,15 +115,20 @@ export function CalculatorWorkspace({
     setSaving(true);
     setMessage("");
 
-    const response = await fetch("/api/quotes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        status,
-        filamentId: selectedFilament.id,
-      }),
-    });
+    const response = await fetch(
+      editingRecord?.kind === "quote"
+        ? `/api/quotes/${editingRecord.id}`
+        : "/api/quotes",
+      {
+        method: editingRecord?.kind === "quote" ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          status,
+          filamentId: selectedFilament.id,
+        }),
+      }
+    );
 
     const payload = (await response.json()) as QuoteRecord | { message: string };
 
@@ -106,7 +139,19 @@ export function CalculatorWorkspace({
     }
 
     const saved = payload as QuoteRecord;
-    setMessage(`Saved ${saved.quoteNumber} as ${saved.status}.`);
+    const nextRecord: EditableRecord = {
+      kind: "quote",
+      id: saved.id,
+      label: saved.quoteNumber,
+      form: recordToForm(saved),
+    };
+    setEditingRecord(nextRecord);
+    setForm(nextRecord.form);
+    setMessage(
+      editingRecord?.kind === "quote"
+        ? `Updated ${saved.quoteNumber}.`
+        : `Saved ${saved.quoteNumber} as ${saved.status}.`
+    );
     setSaving(false);
   }
 
@@ -119,14 +164,19 @@ export function CalculatorWorkspace({
     setSaving(true);
     setMessage("");
 
-    const response = await fetch("/api/prints", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        filamentId: selectedFilament.id,
-      }),
-    });
+    const response = await fetch(
+      editingRecord?.kind === "print"
+        ? `/api/prints/${editingRecord.id}`
+        : "/api/prints",
+      {
+        method: editingRecord?.kind === "print" ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          filamentId: selectedFilament.id,
+        }),
+      }
+    );
 
     const payload = (await response.json()) as PrintRecord | { message: string };
 
@@ -137,7 +187,19 @@ export function CalculatorWorkspace({
     }
 
     const saved = payload as PrintRecord;
-    setMessage(`Saved ${saved.printNumber} to print history.`);
+    const nextRecord: EditableRecord = {
+      kind: "print",
+      id: saved.id,
+      label: saved.printNumber,
+      form: recordToForm(saved),
+    };
+    setEditingRecord(nextRecord);
+    setForm(nextRecord.form);
+    setMessage(
+      editingRecord?.kind === "print"
+        ? `Updated ${saved.printNumber}.`
+        : `Saved ${saved.printNumber} to print history.`
+    );
     setSaving(false);
   }
 
@@ -152,19 +214,16 @@ export function CalculatorWorkspace({
     <div className="mx-auto max-w-7xl space-y-6">
       <PageHeader
         title="Calculator"
-        description="Build a cost summary, then save the job either as a customer quote or as an internal print record."
-        badge="Ready"
+        description={
+          editingRecord
+            ? `Editing ${editingRecord.label}. Update the stored record, or reset to start a fresh quote or print.`
+            : "Build a cost summary, then save the job either as a customer quote or as an internal print record."
+        }
+        badge={editingRecord ? `Editing ${editingRecord.kind}` : "Ready"}
         action={
           <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setForm(buildDefaultQuoteInput(settings, filaments[0]?.id ?? ""));
-                setCalculatedBreakdown(null);
-                setMessage("");
-              }}
-            >
-              Reset
+            <Button variant="secondary" onClick={resetForm}>
+              {editingRecord ? "Exit Edit" : "Reset"}
             </Button>
           </div>
         }
@@ -490,14 +549,18 @@ export function CalculatorWorkspace({
               onClick={() => saveQuote(form.status)}
               disabled={saving || !selectedFilament || !calculatedBreakdown}
             >
-              {saving ? "Saving..." : "Save Quote"}
+              {saving
+                ? "Saving..."
+                : editingRecord?.kind === "quote"
+                  ? "Update Quote"
+                  : "Save Quote"}
             </Button>
             <Button
               variant="secondary"
               onClick={savePrint}
               disabled={saving || !selectedFilament || !calculatedBreakdown}
             >
-              Save Print
+              {editingRecord?.kind === "print" ? "Update Print" : "Save Print"}
             </Button>
             <Button
               variant="ghost"
@@ -520,4 +583,28 @@ export function CalculatorWorkspace({
       </div>
     </div>
   );
+}
+
+function recordToForm(record: QuoteRecord | PrintRecord): QuoteInput {
+  return {
+    customerName: record.customerName,
+    jobName: record.jobName,
+    quantity: record.quantity,
+    filamentId: record.filamentId,
+    gramsUsed: record.gramsUsed,
+    wastePercent: record.wastePercent,
+    printHours: record.printHours,
+    machineRate: record.machineRate,
+    powerDrawWatts: record.powerDrawWatts,
+    electricityCostPerKwh: record.electricityCostPerKwh,
+    laborMinutes: record.laborMinutes,
+    laborRate: record.laborRate,
+    profitMargin: record.profitMargin,
+    minimumPriceFloor: record.minimumPriceFloor,
+    bulkEnabled: record.bulkEnabled,
+    tier2Qty: record.tier2Qty,
+    tier2DiscountPercent: record.tier2DiscountPercent,
+    notes: record.notes,
+    status: "status" in record ? record.status : "Draft",
+  };
 }

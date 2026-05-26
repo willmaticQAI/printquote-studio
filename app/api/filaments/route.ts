@@ -1,10 +1,8 @@
-import { randomUUID } from "node:crypto";
-import { readAppData, updateAppData } from "@/lib/data-store";
+import { createFilament, listFilaments } from "@/lib/data-store";
 import type { FilamentRecord } from "@/lib/types";
 
 export async function GET() {
-  const data = await readAppData();
-  return Response.json(data.filaments);
+  return Response.json(await listFilaments());
 }
 
 export async function POST(request: Request) {
@@ -13,18 +11,5 @@ export async function POST(request: Request) {
     "id" | "createdAt" | "updatedAt"
   >;
 
-  const now = new Date().toISOString();
-  const filament: FilamentRecord = {
-    id: randomUUID(),
-    createdAt: now,
-    updatedAt: now,
-    ...payload,
-  };
-
-  const next = await updateAppData((current) => ({
-    ...current,
-    filaments: [filament, ...current.filaments],
-  }));
-
-  return Response.json(next.filaments[0], { status: 201 });
+  return Response.json(await createFilament(payload), { status: 201 });
 }

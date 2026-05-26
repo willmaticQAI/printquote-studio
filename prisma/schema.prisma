@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum RoundingMode {
+  nearest_0_5
+  up_1
+  down_0_25
+  none
+}
+
+enum QuoteStatus {
+  Draft
+  Quoted
+  Accepted
+  Completed
+}
+
+model Settings {
+  id                     String       @id
+  defaultProfitMargin    Float
+  defaultWastePercent    Float
+  machineRate            Float
+  laborRate              Float
+  electricityCostPerKwh  Float
+  powerDrawWatts         Float
+  minimumPriceFloor      Float
+  roundingMode           RoundingMode
+  currency               String
+  locale                 String
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+}
+
+model Filament {
+  id               String   @id
+  brand            String
+  material         String
+  colorName        String
+  colorHex         String
+  costPerKg        Float
+  spoolWeightGrams Float
+  remainingGrams   Float
+  notes            String
+  createdAt        DateTime
+  updatedAt        DateTime
+}
+
+model Quote {
+  id                     String      @id
+  quoteNumber            String      @unique
+  customerName           String
+  jobName                String
+  quantity               Int
+  filamentId             String
+  filamentLabel          String
+  gramsUsed              Float
+  wastePercent           Float
+  printHours             Float
+  machineRate            Float
+  powerDrawWatts         Float
+  electricityCostPerKwh  Float
+  laborMinutes           Float
+  laborRate              Float
+  profitMargin           Float
+  minimumPriceFloor      Float
+  bulkEnabled            Boolean
+  tier2Qty               Int
+  tier2DiscountPercent   Float
+  notes                  String
+  status                 QuoteStatus
+  materialCost           Float
+  wasteCost              Float
+  machineCost            Float
+  electricityCost        Float
+  laborCost              Float
+  subtotal               Float
+  bulkDiscount           Float
+  suggestedPrice         Float
+  finalTotal             Float
+  profitAmount           Float
+  marginPercent          Float
+  createdAt              DateTime
+  updatedAt              DateTime
+}
+
+model PrintJob {
+  id                     String   @id
+  printNumber            String   @unique
+  customerName           String
+  jobName                String
+  quantity               Int
+  filamentId             String
+  filamentLabel          String
+  gramsUsed              Float
+  wastePercent           Float
+  printHours             Float
+  machineRate            Float
+  powerDrawWatts         Float
+  electricityCostPerKwh  Float
+  laborMinutes           Float
+  laborRate              Float
+  profitMargin           Float
+  minimumPriceFloor      Float
+  bulkEnabled            Boolean
+  tier2Qty               Int
+  tier2DiscountPercent   Float
+  notes                  String
+  materialCost           Float
+  wasteCost              Float
+  machineCost            Float
+  electricityCost        Float
+  laborCost              Float
+  subtotal               Float
+  bulkDiscount           Float
+  suggestedPrice         Float
+  finalTotal             Float
+  profitAmount           Float
+  marginPercent          Float
+  createdAt              DateTime
+  updatedAt              DateTime
+}

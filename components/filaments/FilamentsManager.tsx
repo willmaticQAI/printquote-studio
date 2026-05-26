@@ -4,7 +4,13 @@ import { useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -47,22 +53,70 @@ export function FilamentsManager({
 }: FilamentsManagerProps) {
   const [filaments, setFilaments] = useState(initialFilaments);
   const [form, setForm] = useState<FilamentForm>(initialForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
+    setMessage("");
 
-    const response = await fetch("/api/filaments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    const response = await fetch(
+      editingId ? `/api/filaments/${editingId}` : "/api/filaments",
+      {
+        method: editingId ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      }
+    );
 
-    const saved = (await response.json()) as FilamentRecord;
-    setFilaments((current) => [saved, ...current]);
+    const saved = (await response.json()) as FilamentRecord | { message: string };
+
+    if (!response.ok || "message" in saved) {
+      setMessage("Unable to save filament.");
+      setSaving(false);
+      return;
+    }
+
+    setFilaments((current) =>
+      editingId
+        ? current.map((filament) => (filament.id === saved.id ? saved : filament))
+        : [saved, ...current]
+    );
     setForm(initialForm);
+    setEditingId(null);
     setSaving(false);
+    setMessage(editingId ? "Filament updated." : "Filament added.");
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm("Delete this filament profile?")) return;
+
+    const response = await fetch(`/api/filaments/${id}`, { method: "DELETE" });
+    if (!response.ok) return;
+
+    setFilaments((current) => current.filter((filament) => filament.id !== id));
+    if (editingId === id) {
+      setEditingId(null);
+      setForm(initialForm);
+    }
+    setMessage("Filament deleted.");
+  }
+
+  function beginEdit(filament: FilamentRecord) {
+    setEditingId(filament.id);
+    setForm({
+      brand: filament.brand,
+      material: filament.material,
+      colorName: filament.colorName,
+      colorHex: filament.colorHex,
+      costPerKg: filament.costPerKg,
+      spoolWeightGrams: filament.spoolWeightGrams,
+      remainingGrams: filament.remainingGrams,
+      notes: filament.notes,
+    });
+    setMessage("");
   }
 
   return (
@@ -80,7 +134,7 @@ export function FilamentsManager({
 
       <Card hover glow>
         <CardHeader>
-          <CardTitle>Add Filament</CardTitle>
+          <CardTitle>{editingId ? "Edit Filament" : "Add Filament"}</CardTitle>
           <CardDescription>
             Profiles saved here appear immediately in the calculator.
           </CardDescription>
@@ -175,10 +229,24 @@ export function FilamentsManager({
                 placeholder="Optional supplier notes, batch notes, or settings reminders."
               />
             </label>
-            <div className="sm:col-span-2">
+            <div className="flex flex-wrap gap-2 sm:col-span-2">
               <Button type="submit" disabled={saving}>
-                {saving ? "Saving..." : "Add Filament"}
+                {saving ? "Saving..." : editingId ? "Update Filament" : "Add Filament"}
               </Button>
+              {editingId ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setEditingId(null);
+                    setForm(initialForm);
+                    setMessage("");
+                  }}
+                >
+                  Cancel Edit
+                </Button>
+              ) : null}
+              {message ? <Badge variant="accent">{message}</Badge> : null}
             </div>
           </form>
         </CardContent>
@@ -253,6 +321,14 @@ export function FilamentsManager({
                   {filament.notes ? (
                     <p className="text-xs text-muted">{filament.notes}</p>
                   ) : null}
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => beginEdit(filament)}>
+                      Edit
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleDelete(filament.id)}>
+                      Delete
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             );
