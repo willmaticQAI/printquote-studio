@@ -23,3 +23,24 @@ export function buttonStyles(
     className
   );
 }
+
+export function formatCurrency(value: number, currency = "USD", locale = "en-US") {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+export function formatPercent(value: number) {
+  return `${value.toFixed(1)}%`;
+}
+
+export function formatDate(value: string, locale = "en-US") {
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}

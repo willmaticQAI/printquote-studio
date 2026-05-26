@@ -48,7 +48,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           Local Mode
         </Badge>
         <Link href="/calculator" className={buttonStyles("primary", "px-3 py-1.5 text-xs")}>
-          New Quote
+          New Job
         </Link>
       </div>
     </header>

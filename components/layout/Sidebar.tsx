@@ -15,6 +15,7 @@ const navIcons: Record<string, string> = {
   Calculator: "◎",
   Filaments: "◉",
   Quotes: "▤",
+  Prints: "▦",
   Settings: "⚙",
 };
 

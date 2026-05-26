@@ -1,16 +1,33 @@
 # PrintQuote Studio
 
-**A local-first 3D print pricing and quote manager.**
+Local-first 3D print pricing, quote tracking, and print-cost history.
 
-PrintQuote Studio helps you calculate the true cost of a 3D print, estimate a customer price, manage filament profiles, save quotes, and eventually export quotes—all on your machine.
+PrintQuote Studio helps you:
+
+- calculate the real cost of a 3D print
+- generate customer-facing quotes
+- save internal print records for jobs that are not for sale
+- manage filament profiles and spool inventory
+- store shop pricing defaults locally on your machine
+
+## Current features
+
+- Live dashboard with quote totals, revenue estimates, and inventory alerts
+- Working calculator with explicit `Calculate Summary` flow
+- Hover help tooltips for pricing and machine-cost fields
+- Saved filament profiles used directly by the calculator
+- Saved quotes with status tracking
+- Saved print history for internal/non-sale jobs
+- Local persistence through JSON-backed API routes
 
 ## Tech stack
 
-- [Next.js](https://nextjs.org/) (App Router)
+- [Next.js](https://nextjs.org/) App Router
 - [TypeScript](https://www.typescriptlang.org/)
 - [Tailwind CSS](https://tailwindcss.com/)
-- [Prisma](https://www.prisma.io/) — folder prepared; schema in a later phase
-- SQLite — planned for local-first storage
+- Local JSON file storage in `data/store.json`
+
+`prisma/` remains in the repo as a future migration path if you later want SQLite or a fuller database layer.
 
 ## Local development
 
@@ -20,67 +37,79 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open `http://localhost:3000`.
 
-Other scripts:
+Useful scripts:
 
-| Command        | Description              |
-| -------------- | ------------------------ |
-| `npm run build` | Production build        |
-| `npm run start` | Run production server   |
-| `npm run lint`  | ESLint                  |
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the local dev server |
+| `npm run build` | Production build |
+| `npm run start` | Run the production server |
+| `npm run typecheck` | TypeScript validation |
+| `npm run lint` | ESLint |
 
-## Folder structure
+## How data is stored
 
-```
+The app uses local file-backed persistence.
+
+- App data is stored in `data/store.json`
+- The `data/` directory is ignored by git
+- API routes under `app/api/` read and write that file
+
+This keeps the app simple and local-first while still giving you a small backend for settings, filaments, quotes, and prints.
+
+## Main routes
+
+- `/` dashboard
+- `/calculator` cost calculator and save flow
+- `/filaments` filament inventory management
+- `/quotes` customer quote history
+- `/prints` internal print history
+- `/settings` shop defaults
+
+## Typical workflow
+
+1. Add one or more filament profiles.
+2. Set your shop defaults in Settings.
+3. Open the Calculator and enter print details.
+4. Click `Calculate Summary`.
+5. Save the job as either:
+   - `Save Quote` for customer work
+   - `Save Print` for internal/non-sale work
+
+## Project structure
+
+```text
 printquote-studio/
 ├── app/
 │   ├── api/
-│   │   ├── quotes/       # API placeholder (501)
 │   │   ├── filaments/
+│   │   ├── prints/
+│   │   ├── quotes/
 │   │   └── settings/
-│   ├── calculator/       # Pricing calculator (Phase 1)
-│   ├── filaments/        # Filament profiles (Phase 2)
-│   ├── quotes/           # Saved quotes (Phase 3)
-│   ├── settings/         # Shop defaults
-│   ├── layout.tsx
-│   ├── page.tsx          # Dashboard home
-│   └── globals.css       # Theme tokens
-├── components/
-│   ├── layout/           # AppShell, Sidebar, Topbar
-│   ├── ui/               # Button, Card, Input, etc.
 │   ├── calculator/
 │   ├── filaments/
-│   └── quotes/
+│   ├── prints/
+│   ├── quotes/
+│   ├── settings/
+│   └── page.tsx
+├── components/
+│   ├── calculator/
+│   ├── filaments/
+│   ├── prints/
+│   ├── quotes/
+│   ├── settings/
+│   └── ui/
+├── data/                # local runtime storage, gitignored
 ├── lib/
-│   ├── constants.ts      # App name, nav, filament types
+│   ├── data-store.ts
+│   ├── quote-calculations.ts
+│   ├── types.ts
 │   └── utils.ts
-├── prisma/               # Prisma-ready (empty in Phase 0)
-└── public/
+└── prisma/              # reserved for future DB migration
 ```
-
-## Planned roadmap
-
-| Phase | Focus |
-| ----- | ----- |
-| **0** | Architecture, theme, shell, placeholder routes ✅ |
-| **1** | Cost calculator formulas and inputs |
-| **2** | Prisma + SQLite, filament profiles, settings persistence |
-| **3** | Quote save/list/export |
-| **4** | Polish, PDF/export, optional enhancements |
-
-## Phase 0 completion notes
-
-- Next.js app with TypeScript and Tailwind CSS v4
-- Dark dashboard theme (near-black background, cyan accent)
-- App shell: sidebar navigation, top bar, main content area
-- Placeholder pages: `/`, `/calculator`, `/filaments`, `/quotes`, `/settings`
-- Reusable UI primitives: Button, Card, Input, Select, Badge
-- `lib/constants.ts` with app identity, navigation, and filament types
-- API route stubs returning `501 Not Implemented`
-- Prisma directory reserved; no schema yet
-- No authentication, payments, or cloud deployment
 
 ## License
 
-Private project — add license as needed.
+MIT

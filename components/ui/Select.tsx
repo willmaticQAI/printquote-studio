@@ -1,15 +1,17 @@
 import { cn } from "@/lib/utils";
-import type { SelectHTMLAttributes } from "react";
+import type { ReactNode, SelectHTMLAttributes } from "react";
 
 type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & {
   label?: string;
   hint?: string;
+  labelAddon?: ReactNode;
 };
 
 export function Select({
   className,
   label,
   hint,
+  labelAddon,
   id,
   children,
   ...props
@@ -35,7 +37,10 @@ export function Select({
   return (
     <label className="block space-y-1.5" htmlFor={selectId}>
       {label ? (
-        <span className="text-sm font-medium text-foreground">{label}</span>
+        <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <span>{label}</span>
+          {labelAddon}
+        </span>
       ) : null}
       {field}
       {hint ? <span className="text-xs text-muted">{hint}</span> : null}
